@@ -18,6 +18,8 @@ export default defineComponent({
 <style>
 body {
   margin: 0;
+  overflow-y: hidden;
+  overflow-x: hidden;
 }
 
 #app {
