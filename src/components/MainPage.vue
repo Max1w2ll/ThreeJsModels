@@ -1,29 +1,33 @@
 <script lang="ts" setup>
 /* eslint-disable */
-import * as THREE from 'three';
-import { OrbitControls } from "three/examples/jsm/controls/OrbitControls";
-import { TransformControls } from "three/examples/jsm/controls/TransformControls";
-import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader';
+import * as THREE from 'three'
+import { onMounted, ref } from "vue"
+import { OrbitControls } from "three/examples/jsm/controls/OrbitControls"
+import { TransformControls } from "three/examples/jsm/controls/TransformControls"
+import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader'
 import Stats from 'stats.js'
-import { models } from "@/types/enums";
-import { onMounted, ref } from "vue";
+import { models } from "@/types/enums"
 
 const stats = new Stats()
-const renderer = new THREE.WebGLRenderer();
-const scene = new THREE.Scene();
-const camera = new THREE.PerspectiveCamera( 45, window.innerWidth / window.innerHeight, 1, 10000 );
-const axesHelper = new THREE.AxesHelper( 999 );
-const controls = new OrbitControls( camera, renderer.domElement );
+const renderer = new THREE.WebGLRenderer()
+const scene = new THREE.Scene()
+const camera = new THREE.PerspectiveCamera( 45, window.innerWidth / window.innerHeight, 1, 10000 )
+const transformControls = new TransformControls( camera, renderer.domElement )
+const axesHelper = new THREE.AxesHelper( 999 )
+const controls = new OrbitControls( camera, renderer.domElement )
 
-const geometry = new THREE.BoxGeometry( 3, 3, 3 );
-const material = new THREE.MeshStandardMaterial( { color: 0x8f9092 } );
-const cube = new THREE.Mesh( geometry, material );
+const geometry = new THREE.BoxGeometry( 1, 1, 1 )
+const material = new THREE.MeshStandardMaterial( { color: 0x8f9092 } )
+const cube = new THREE.Mesh( geometry, material )
 
-const spotLight = new THREE.SpotLight( 0xffffff, 100 );
-const lightHelper = new THREE.SpotLightHelper( spotLight );
-const shadowCameraHelper = new THREE.CameraHelper( spotLight.shadow.camera );
+const spotLight = new THREE.SpotLight( 0xffffff, 100 )
+const lightHelper = new THREE.SpotLightHelper( spotLight )
+const shadowCameraHelper = new THREE.CameraHelper( spotLight.shadow.camera )
 
 const selectedMesh = ref<string>('')
+const raycaster = new THREE.Raycaster()
+const selectableGroup = new THREE.Group()
+const selectedObject = ref()
 
 onMounted(() => {
   createFPSCounter()
@@ -43,121 +47,130 @@ const createFPSCounter = () => {
 }
 
 const hideSettings = () => {
-  const settings = document.getElementById('mesh-settings');
-  const showSettings = document.getElementById('show-settings');
-  settings?.classList.add("hidden");
-  showSettings?.classList.remove("hidden");
+  const settings = document.getElementById('mesh-settings')
+  const showSettings = document.getElementById('show-settings')
+  settings?.classList.add("hidden")
+  showSettings?.classList.remove("hidden")
 }
 
 const showSettings = () => {
-  const settings = document.getElementById('mesh-settings');
-  const showSettings = document.getElementById('show-settings');
-  settings?.classList.remove("hidden");
-  showSettings?.classList.add("hidden");
+  const settings = document.getElementById('mesh-settings')
+  const showSettings = document.getElementById('show-settings')
+  settings?.classList.remove("hidden")
+  showSettings?.classList.add("hidden")
 }
 
 const createMesh = () => {
   if (!selectedMesh.value) return
-  const loader = new GLTFLoader();
+  const loader = new GLTFLoader()
   loader.load( `/geometries/${selectedMesh.value}.glb`, function ( gltf: any ) {
-    scene.add( gltf.scene );
+    scene.add( gltf.scene )
+    selectableGroup.add( gltf.scene )
   }, undefined, function ( error: any ) {
-    console.error( error );
-  });
+    console.error( error )
+  })
 }
 
 const createScene = () => {
-  renderer.setSize( window.innerWidth, window.innerHeight );
-  renderer.shadowMap.enabled = true;
-  renderer.shadowMap.type = THREE.PCFSoftShadowMap;
-  renderer.setAnimationLoop( animate );
-  document.body.appendChild( renderer.domElement );
-  scene.background = new THREE.Color( 0x3f3f3f );
+  renderer.setSize( window.innerWidth, window.innerHeight )
+  renderer.shadowMap.enabled = true
+  renderer.shadowMap.type = THREE.PCFSoftShadowMap
+  renderer.setAnimationLoop( animate )
+  document.body.appendChild( renderer.domElement )
+  scene.background = new THREE.Color( 0x3f3f3f )
 }
 
 const createCamera = () => {
-  camera.position.x = 15;
-  camera.position.y = 12;
-  camera.position.z = 15;
+  camera.position.x = 5
+  camera.position.y = 4
+  camera.position.z = 5
   camera.rotation.x = -0.5
   camera.rotation.y = 0.7
   camera.rotation.z = 0.45
 }
 
 const createGrid = () => {
-  const size = 999;
-  const divisions = 999;
-  const gridHelper = new THREE.GridHelper( size, divisions );
-  scene.add( gridHelper );
+  const size = 999
+  const divisions = 999
+  const gridHelper = new THREE.GridHelper( size, divisions )
+  scene.add( gridHelper )
 }
 
 const createXYZ = () => {
-  scene.add( axesHelper );
+  scene.add( axesHelper )
 }
 
-// Raycaster (select mesh)
-const raycaster = new THREE.Raycaster();
-const pointer = new THREE.Vector2();
-const movePounter = new THREE.Vector2();
-let draggable: THREE.Object3D;
-
-window.addEventListener('click', event => {
-
-})
-
 const createCube = () => {
-  cube.position.set(0, 1.5, 0);
-  cube.castShadow = true;
-  cube.receiveShadow = true;
-  scene.add( cube );
+  cube.position.set(0, 0.5, 0)
+  cube.castShadow = true
+  cube.receiveShadow = true
+  cube.name = 'cube'
+  scene.add( cube )
+  selectableGroup.add(cube)
+  scene.add(selectableGroup)
+  selectedObject.value = cube
 }
 
 const createAmbientLight = () => {
-  // Ambient light
-  var ambient = new THREE.AmbientLight( 0xffffff, 0.1 );
-  scene.add( ambient );
+  const ambient = new THREE.AmbientLight( 0xffffff, 0.1 )
+  scene.add( ambient )
 }
 
 const createSpotLight = () => {
-  spotLight.position.set( 3, 5, -5 );
-  spotLight.angle = Math.PI / 4;
-  spotLight.penumbra = 0.05;
-  spotLight.distance = 1000;
-  spotLight.castShadow = true;
-  spotLight.shadow.mapSize.width = 1024;
-  spotLight.shadow.mapSize.height = 1024;
-  spotLight.shadow.camera.near = 2;
-  scene.add( spotLight );
+  spotLight.position.set( 3, 5, -5 )
+  spotLight.angle = Math.PI / 4
+  spotLight.penumbra = 0.05
+  spotLight.distance = 1000
+  spotLight.castShadow = true
+  spotLight.shadow.mapSize.width = 1024
+  spotLight.shadow.mapSize.height = 1024
+  spotLight.shadow.camera.near = 2
+  scene.add( spotLight )
 
   setLightHelper()
   setShadowHelper()
 }
 
 const setLightHelper = () => {
-  lightHelper.visible = false;
-  scene.add( lightHelper );
+  lightHelper.visible = false
+  scene.add( lightHelper )
 }
 
 const setShadowHelper = () => {
-  shadowCameraHelper.visible = false;
-  scene.add( shadowCameraHelper );
+  shadowCameraHelper.visible = false
+  scene.add( shadowCameraHelper )
 }
 
 const createPivot = () => {
-  const transformControls = new TransformControls( camera, renderer.domElement );
   transformControls.addEventListener('dragging-changed', function(e) {
-    controls.enabled = !e.value;
-  });
+    controls.enabled = !e.value
+  })
   transformControls.attach(cube)
-  scene.add( transformControls );
+  scene.add( transformControls )
 }
+
+const select = (event: any) => {
+  const coords = new THREE.Vector2(
+    (event.clientX / renderer.domElement.clientWidth) * 2 - 1,
+    -((event.clientY / renderer.domElement.clientHeight) * 2 - 1),
+  )
+  raycaster.setFromCamera(coords, camera)
+  const instersections = raycaster.intersectObjects(selectableGroup.children, true)
+  if (instersections.length > 0) {
+    selectedObject.value = instersections[0].object
+    transformControls.attach(selectedObject.value)
+    console.log('selectedObject.value', selectedObject.value);
+  }
+}
+document.addEventListener('mousedown', select)
+
 
 const animate = () => {
   stats.begin()
 
-  lightHelper.update();
-  shadowCameraHelper.update();
-  renderer.render( scene, camera );
+  lightHelper.update()
+  shadowCameraHelper.update()
+  renderer.render( scene, camera )
 
   stats.end()
 }
@@ -169,11 +182,12 @@ const animate = () => {
   </div>
   <div class="mesh-settings" id="mesh-settings">
       <div class="title-arrow">
-        <p class="title"> Mesh settings </p>
+        <p class="title"> Settings </p>
         <img @click="hideSettings()" class="arrow-right" src="@/assets/images/arrow_right.svg" alt="">
       </div>
       <div class="settings">
         <div class="setting">
+          <span class="title"> Selected: {{ selectedObject?.name }} </span>
           <p class="title"> Location </p>
           <input type="number" placeholder="x"/>
           <input type="number" placeholder="y"/>
@@ -258,7 +272,7 @@ const animate = () => {
         border-radius: 4px;
         color: #fefefe;
       }
-      
+
       button {
         cursor: pointer;
       }
