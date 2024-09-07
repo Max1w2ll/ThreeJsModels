@@ -1,82 +1,99 @@
-<script lang="ts">
+<script lang="ts" setup>
 /* eslint-disable */
 import * as THREE from 'three';
 import { OrbitControls } from "three/examples/jsm/controls/OrbitControls";
 import { TransformControls } from "three/examples/jsm/controls/TransformControls";
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader';
 import Stats from 'stats.js'
-import { ref } from "vue";
-import { string } from "mathjs";
+import { models } from "@/types/enums";
+import { onMounted, ref } from "vue";
 
-// const selectedMesh = ref<string>()
-
-export default {
-  name: 'MainPage',
-
-  data() {
-    return {
-      selectedMesh: string
-    }
-  },
-
-  methods: {
-    hideSettings() {
-      const settings = document.getElementById('mesh-settings');
-      const showSettings = document.getElementById('show-settings');
-      settings?.classList.add("hidden");
-      showSettings?.classList.remove("hidden");
-    },
-
-    showSettings() {
-      const settings = document.getElementById('mesh-settings');
-      const showSettings = document.getElementById('show-settings');
-      settings?.classList.remove("hidden");
-      showSettings?.classList.add("hidden");
-    },
-
-    createMesh() {
-      const loader = new GLTFLoader();
-
-      loader.load( "/geometries/chair.glb", function ( gltf: any ) {
-        scene.add( gltf.scene );
-      }, undefined, function ( error: any ) {
-        console.error( error );
-      });
-    }
-  }
-}
-// FPS counter
 const stats = new Stats()
-stats.showPanel(0)
-document.body.appendChild(stats.dom)
-
-// Set scene
 const renderer = new THREE.WebGLRenderer();
 const scene = new THREE.Scene();
-renderer.setSize( window.innerWidth, window.innerHeight );
-renderer.setAnimationLoop( animate );
-document.body.appendChild( renderer.domElement );
-scene.background = new THREE.Color( 0x3f3f3f );
-
-// Set camera and controls
 const camera = new THREE.PerspectiveCamera( 45, window.innerWidth / window.innerHeight, 1, 10000 );
-camera.position.x = 15;
-camera.position.y = 12;
-camera.position.z = 15;
-camera.rotation.x = -0.5
-camera.rotation.y = 0.7
-camera.rotation.z = 0.45
+const axesHelper = new THREE.AxesHelper( 999 );
 const controls = new OrbitControls( camera, renderer.domElement );
 
-// Grid
-const size = 999;
-const divisions = 999;
-const gridHelper = new THREE.GridHelper( size, divisions );
-scene.add( gridHelper );
+const geometry = new THREE.BoxGeometry( 3, 3, 3 );
+const material = new THREE.MeshStandardMaterial( { color: 0x8f9092 } );
+const cube = new THREE.Mesh( geometry, material );
 
-// XYZ Axes
-const axesHelper = new THREE.AxesHelper( 999 );
-scene.add( axesHelper );
+const spotLight = new THREE.SpotLight( 0xffffff, 100 );
+const lightHelper = new THREE.SpotLightHelper( spotLight );
+const shadowCameraHelper = new THREE.CameraHelper( spotLight.shadow.camera );
+
+const selectedMesh = ref<string>('')
+
+onMounted(() => {
+  createFPSCounter()
+  createScene()
+  createCamera()
+  createGrid()
+  createXYZ()
+  createCube()
+  createAmbientLight()
+  createSpotLight()
+  createPivot()
+})
+
+const createFPSCounter = () => {
+  stats.showPanel(0)
+  document.body.appendChild(stats.dom)
+}
+
+const hideSettings = () => {
+  const settings = document.getElementById('mesh-settings');
+  const showSettings = document.getElementById('show-settings');
+  settings?.classList.add("hidden");
+  showSettings?.classList.remove("hidden");
+}
+
+const showSettings = () => {
+  const settings = document.getElementById('mesh-settings');
+  const showSettings = document.getElementById('show-settings');
+  settings?.classList.remove("hidden");
+  showSettings?.classList.add("hidden");
+}
+
+const createMesh = () => {
+  if (!selectedMesh.value) return
+  const loader = new GLTFLoader();
+  loader.load( `/geometries/${selectedMesh.value}.glb`, function ( gltf: any ) {
+    scene.add( gltf.scene );
+  }, undefined, function ( error: any ) {
+    console.error( error );
+  });
+}
+
+const createScene = () => {
+  renderer.setSize( window.innerWidth, window.innerHeight );
+  renderer.shadowMap.enabled = true;
+  renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+  renderer.setAnimationLoop( animate );
+  document.body.appendChild( renderer.domElement );
+  scene.background = new THREE.Color( 0x3f3f3f );
+}
+
+const createCamera = () => {
+  camera.position.x = 15;
+  camera.position.y = 12;
+  camera.position.z = 15;
+  camera.rotation.x = -0.5
+  camera.rotation.y = 0.7
+  camera.rotation.z = 0.45
+}
+
+const createGrid = () => {
+  const size = 999;
+  const divisions = 999;
+  const gridHelper = new THREE.GridHelper( size, divisions );
+  scene.add( gridHelper );
+}
+
+const createXYZ = () => {
+  scene.add( axesHelper );
+}
 
 // Raycaster (select mesh)
 const raycaster = new THREE.Raycaster();
@@ -88,53 +105,54 @@ window.addEventListener('click', event => {
 
 })
 
-renderer.shadowMap.enabled = true;
-renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+const createCube = () => {
+  cube.position.set(0, 1.5, 0);
+  cube.castShadow = true;
+  cube.receiveShadow = true;
+  scene.add( cube );
+}
 
-var geometry = new THREE.BoxGeometry( 3, 3, 3 );
-var material = new THREE.MeshStandardMaterial( { color: 0x8f9092 } );
-var cube = new THREE.Mesh( geometry, material );
-cube.position.set(0, 1.5, 0);
-cube.castShadow = true;
-cube.receiveShadow = true;
-scene.add( cube );
+const createAmbientLight = () => {
+  // Ambient light
+  var ambient = new THREE.AmbientLight( 0xffffff, 0.1 );
+  scene.add( ambient );
+}
 
-// Ambient light
-var ambient = new THREE.AmbientLight( 0xffffff, 0.1 );
-scene.add( ambient );
-
-// Spot light
-let spotLight = new THREE.SpotLight( 0xffffff, 100 );
-spotLight.position.set( 3, 5, -5 );
-spotLight.angle = Math.PI / 4;
-spotLight.penumbra = 0.05;
-/* spotLight.decay = 2; */
-spotLight.distance = 1000;
-spotLight.castShadow = true;
+const createSpotLight = () => {
+  spotLight.position.set( 3, 5, -5 );
+  spotLight.angle = Math.PI / 4;
+  spotLight.penumbra = 0.05;
+  spotLight.distance = 1000;
+  spotLight.castShadow = true;
   spotLight.shadow.mapSize.width = 1024;
-spotLight.shadow.mapSize.height = 1024;
-spotLight.shadow.camera.near = 2;
-/* spotLight.shadow.camera.far = 15; */
-scene.add( spotLight );
+  spotLight.shadow.mapSize.height = 1024;
+  spotLight.shadow.camera.near = 2;
+  scene.add( spotLight );
 
-let lightHelper = new THREE.SpotLightHelper( spotLight );
-lightHelper.visible = false;
-scene.add( lightHelper );
+  setLightHelper()
+  setShadowHelper()
+}
 
-let shadowCameraHelper = new THREE.CameraHelper( spotLight.shadow.camera );
-shadowCameraHelper.visible = false;
-scene.add( shadowCameraHelper );
+const setLightHelper = () => {
+  lightHelper.visible = false;
+  scene.add( lightHelper );
+}
 
-// Transform controls (move mesh)
-const transformControls = new TransformControls( camera, renderer.domElement );
-transformControls.addEventListener('dragging-changed', function(e) {
-  controls.enabled = !e.value;
-});
-transformControls.attach(cube)
-scene.add( transformControls );
+const setShadowHelper = () => {
+  shadowCameraHelper.visible = false;
+  scene.add( shadowCameraHelper );
+}
 
-// Render
-function animate() {
+const createPivot = () => {
+  const transformControls = new TransformControls( camera, renderer.domElement );
+  transformControls.addEventListener('dragging-changed', function(e) {
+    controls.enabled = !e.value;
+  });
+  transformControls.attach(cube)
+  scene.add( transformControls );
+}
+
+const animate = () => {
   stats.begin()
 
   lightHelper.update();
@@ -181,8 +199,11 @@ function animate() {
         </div>
         <div class="setting">
           <p class="title"> Create mesh </p>
-          <select :value="selectedMesh">
+          <select v-model="selectedMesh">
             <option value="" disabled selected>Select mesh</option>
+            <option v-for="model in models">
+              {{ model.value }}
+            </option>
           </select>
           <button @click="createMesh()" type="button">Create</button>
         </div>

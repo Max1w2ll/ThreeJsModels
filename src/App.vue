@@ -2,17 +2,8 @@
   <MainPage />
 </template>
 
-<script lang="ts">
-/* eslint-disable */
-import { defineComponent } from "vue";
-import MainPage from "./components/Main.vue";
-
-export default defineComponent({
-  name: "App",
-  components: {
-    MainPage,
-  },
-});
+<script lang="ts" setup>
+import MainPage from "./components/MainPage.vue";
 </script>
 
 <style>
