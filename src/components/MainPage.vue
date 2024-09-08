@@ -1,12 +1,19 @@
 <script lang="ts" setup>
 /* eslint-disable */
 import * as THREE from 'three'
-import { onMounted, ref } from "vue"
+import { onMounted, ref } from "vue";
 import { OrbitControls } from "three/examples/jsm/controls/OrbitControls"
 import { TransformControls } from "three/examples/jsm/controls/TransformControls"
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader'
 import Stats from 'stats.js'
-import { models } from "@/types/enums"
+import {
+  models,
+  albedoTextures,
+  metalnessTextures,
+  normalTextures,
+  roughnessTextures,
+  sheenTextures
+} from "@/types/enums"
 
 const stats = new Stats()
 const renderer = new THREE.WebGLRenderer()
@@ -16,15 +23,18 @@ const transformControls = new TransformControls( camera, renderer.domElement )
 const axesHelper = new THREE.AxesHelper( 999 )
 const controls = new OrbitControls( camera, renderer.domElement )
 
-const geometry = new THREE.BoxGeometry( 1, 1, 1 )
-const material = new THREE.MeshStandardMaterial( { color: 0x8f9092 } )
-const cube = new THREE.Mesh( geometry, material )
-
 const spotLight = new THREE.SpotLight( 0xffffff, 100 )
 const lightHelper = new THREE.SpotLightHelper( spotLight )
 const shadowCameraHelper = new THREE.CameraHelper( spotLight.shadow.camera )
 
+// Selected values
 const selectedMesh = ref<string>('')
+const selectedAlbedo = ref<string>('')
+const selectedMetalness = ref<string>('')
+const selectedNormal = ref<string>('')
+const selectedRoughness = ref<string>('')
+const selectedSheen = ref<string>('')
+
 const raycaster = new THREE.Raycaster()
 const selectableGroup = new THREE.Group()
 const selectedObject = ref()
@@ -35,7 +45,6 @@ onMounted(() => {
   createCamera()
   createGrid()
   createXYZ()
-  createCube()
   createAmbientLight()
   createSpotLight()
   createPivot()
@@ -47,17 +56,17 @@ const createFPSCounter = () => {
 }
 
 const hideSettings = () => {
-  const settings = document.getElementById('mesh-settings')
-  const showSettings = document.getElementById('show-settings')
+  const settings = document.getElementById('settings')
+  const showSettingsTab = document.getElementById('show-settings')
   settings?.classList.add("hidden")
-  showSettings?.classList.remove("hidden")
+  showSettingsTab?.classList.remove("hidden")
 }
 
 const showSettings = () => {
-  const settings = document.getElementById('mesh-settings')
-  const showSettings = document.getElementById('show-settings')
+  const settings = document.getElementById('settings')
+  const showSettingsTab = document.getElementById('show-settings')
   settings?.classList.remove("hidden")
-  showSettings?.classList.add("hidden")
+  showSettingsTab?.classList.add("hidden")
 }
 
 const createMesh = () => {
@@ -69,6 +78,13 @@ const createMesh = () => {
   }, undefined, function ( error: any ) {
     console.error( error )
   })
+}
+
+const removeMesh = () => {
+  transformControls.detach()
+  scene.remove( selectedObject.value );
+  selectedObject.value.removeFromParent();
+  selectedObject.value = {}
 }
 
 const createScene = () => {
@@ -98,17 +114,6 @@ const createGrid = () => {
 
 const createXYZ = () => {
   scene.add( axesHelper )
-}
-
-const createCube = () => {
-  cube.position.set(0, 0.5, 0)
-  cube.castShadow = true
-  cube.receiveShadow = true
-  cube.name = 'cube'
-  scene.add( cube )
-  selectableGroup.add(cube)
-  scene.add(selectableGroup)
-  selectedObject.value = cube
 }
 
 const createAmbientLight = () => {
@@ -145,8 +150,8 @@ const createPivot = () => {
   transformControls.addEventListener('dragging-changed', function(e) {
     controls.enabled = !e.value
   })
-  transformControls.attach(cube)
   scene.add( transformControls )
+  scene.add( selectableGroup )
 }
 
 const select = (event: any) => {
@@ -159,11 +164,9 @@ const select = (event: any) => {
   if (instersections.length > 0) {
     selectedObject.value = instersections[0].object
     transformControls.attach(selectedObject.value)
-    console.log('selectedObject.value', selectedObject.value);
   }
 }
 document.addEventListener('mousedown', select)
-
 
 const animate = () => {
   stats.begin()
@@ -174,50 +177,62 @@ const animate = () => {
 
   stats.end()
 }
+
+const getCoords = () => {
+  return selectedObject.value?.position
+}
+
 </script>
 
 <template>
   <div class="show-settings hidden" id="show-settings">
     <img @click="showSettings()" class="arrow-left" src="@/assets/images/arrow_left.svg" alt="">
   </div>
-  <div class="mesh-settings" id="mesh-settings">
-      <div class="title-arrow">
+  <div class="main-settings" id="settings">
+      <div class="title-icon">
         <p class="title"> Settings </p>
         <img @click="hideSettings()" class="arrow-right" src="@/assets/images/arrow_right.svg" alt="">
       </div>
       <div class="settings">
         <div class="setting">
-          <span class="title"> Selected: {{ selectedObject?.name }} </span>
+          <div class="selected-delete">
+            <span class="title"> Selected: {{ selectedObject?.name ? selectedObject?.name : 'none' }} </span>
+            <img v-if="selectedObject?.name" @click="removeMesh()" class="delete" src="@/assets/images/delete.svg" alt="">
+          </div>
           <p class="title"> Location </p>
-          <input type="number" placeholder="x"/>
-          <input type="number" placeholder="y"/>
-          <input type="number" placeholder="z"/>
+          <input :value="getCoords()?.x.toFixed(2)" type="number" placeholder="x"/>
+          <input :value="getCoords()?.y.toFixed(2)" type="number" placeholder="y"/>
+          <input :value="getCoords()?.z.toFixed(2)" type="number" placeholder="z"/>
         </div>
         <div class="setting">
           <p class="title"> Materials </p>
-          <select>
+          <select v-model="selectedAlbedo">
             <option value="" disabled selected>albedo</option>
+            <option v-for="texture in albedoTextures"> {{ texture.value }} </option>
           </select>
-          <select>
+          <select v-model="selectedRoughness">
             <option value="" disabled selected>roughness</option>
+            <option v-for="texture in roughnessTextures"> {{ texture.value }} </option>
           </select>
-          <select>
+          <select v-model="selectedMetalness">
             <option value="" disabled selected>metalness</option>
+            <option v-for="texture in metalnessTextures"> {{ texture.value }} </option>
           </select>
-          <select>
+          <select v-model="selectedNormal">
             <option value="" disabled selected>normal</option>
+            <option v-for="texture in normalTextures"> {{ texture.value }} </option>
           </select>
-          <select>
+          <select v-model="selectedSheen">
             <option value="" disabled selected>sheen</option>
+            <option v-for="texture in sheenTextures"> {{ texture.value }} </option>
           </select>
+          <button type="button"> Apply materials </button>
         </div>
         <div class="setting">
           <p class="title"> Create mesh </p>
           <select v-model="selectedMesh">
             <option value="" disabled selected>Select mesh</option>
-            <option v-for="model in models">
-              {{ model.value }}
-            </option>
+            <option v-for="model in models"> {{ model.value }} </option>
           </select>
           <button @click="createMesh()" type="button">Create</button>
         </div>
@@ -226,7 +241,7 @@ const animate = () => {
 </template>
 
 <style scoped>
-.mesh-settings {
+.main-settings {
   position: absolute;
   top: 64px;
   right: 5px;
@@ -243,11 +258,28 @@ const animate = () => {
   transition: 0.5s;
   transform: translateX(0);
 
-  .title-arrow {
+  .title-icon {
     .arrow-right {
       position: absolute;
       top: 12px;
       right: 12px;
+      cursor: pointer;
+    }
+  }
+
+  .selected-delete {
+    position: relative;
+    display: inline-block;
+    word-break: break-word;
+
+    .title {
+      width: 170px !important;
+      display: inline-grid;
+    }
+
+    .delete {
+      position: absolute;
+      right: 0;
       cursor: pointer;
     }
   }
