@@ -15,14 +15,15 @@ import {
   sheenTextures
 } from "@/types/enums"
 
+// Scene
 const stats = new Stats()
 const renderer = new THREE.WebGLRenderer()
 const scene = new THREE.Scene()
 const camera = new THREE.PerspectiveCamera( 45, window.innerWidth / window.innerHeight, 1, 10000 )
-const transformControls = new TransformControls( camera, renderer.domElement )
-const axesHelper = new THREE.AxesHelper( 999 )
 const controls = new OrbitControls( camera, renderer.domElement )
+const axesHelper = new THREE.AxesHelper( 999 )
 
+// Lighting
 const spotLight = new THREE.SpotLight( 0xffffff, 100 )
 const lightHelper = new THREE.SpotLightHelper( spotLight )
 const shadowCameraHelper = new THREE.CameraHelper( spotLight.shadow.camera )
@@ -35,9 +36,11 @@ const selectedNormal = ref<string>('')
 const selectedRoughness = ref<string>('')
 const selectedSheen = ref<string>('')
 
+// Select and move
 const raycaster = new THREE.Raycaster()
 const selectableGroup = new THREE.Group()
 const selectedObject = ref()
+const transformControls = new TransformControls( camera, renderer.domElement )
 
 onMounted(() => {
   createFPSCounter()
@@ -50,41 +53,10 @@ onMounted(() => {
   createPivot()
 })
 
+// Setting up scene //
 const createFPSCounter = () => {
   stats.showPanel(0)
   document.body.appendChild(stats.dom)
-}
-
-const hideSettings = () => {
-  const settings = document.getElementById('settings')
-  const showSettingsTab = document.getElementById('show-settings')
-  settings?.classList.add("hidden")
-  showSettingsTab?.classList.remove("hidden")
-}
-
-const showSettings = () => {
-  const settings = document.getElementById('settings')
-  const showSettingsTab = document.getElementById('show-settings')
-  settings?.classList.remove("hidden")
-  showSettingsTab?.classList.add("hidden")
-}
-
-const createMesh = () => {
-  if (!selectedMesh.value) return
-  const loader = new GLTFLoader()
-  loader.load( `/geometries/${selectedMesh.value}.glb`, function ( gltf: any ) {
-    scene.add( gltf.scene )
-    selectableGroup.add( gltf.scene )
-  }, undefined, function ( error: any ) {
-    console.error( error )
-  })
-}
-
-const removeMesh = () => {
-  transformControls.detach()
-  scene.remove( selectedObject.value );
-  selectedObject.value.removeFromParent();
-  selectedObject.value = {}
 }
 
 const createScene = () => {
@@ -178,8 +150,46 @@ const animate = () => {
   stats.end()
 }
 
+// Right menu //
+const hideSettings = () => {
+  const settings = document.getElementById('settings')
+  const showSettingsTab = document.getElementById('show-settings')
+  settings?.classList.add("hidden")
+  showSettingsTab?.classList.remove("hidden")
+}
+
+const showSettings = () => {
+  const settings = document.getElementById('settings')
+  const showSettingsTab = document.getElementById('show-settings')
+  settings?.classList.remove("hidden")
+  showSettingsTab?.classList.add("hidden")
+}
+
 const getCoords = () => {
   return selectedObject.value?.position
+}
+
+// Mesh functions //
+const createMesh = () => {
+  if (!selectedMesh.value) return
+  const loader = new GLTFLoader()
+  loader.load( `/geometries/${selectedMesh.value}.glb`, function ( gltf: any ) {
+    scene.add( gltf.scene )
+    selectableGroup.add( gltf.scene )
+  }, undefined, function ( error: any ) {
+    console.error( error )
+  })
+}
+
+const removeMesh = () => {
+  transformControls.detach()
+  scene.remove( selectedObject.value );
+  selectedObject.value.removeFromParent();
+  selectedObject.value = {}
+}
+
+const applyTextures = () => {
+  const texture = THREE.TextureLoader().load(`/textures/${selectedMesh.value}.glb`)
 }
 
 </script>
@@ -208,23 +218,23 @@ const getCoords = () => {
           <p class="title"> Materials </p>
           <select v-model="selectedAlbedo">
             <option value="" disabled selected>albedo</option>
-            <option v-for="texture in albedoTextures"> {{ texture.value }} </option>
+            <option v-for="texture in albedoTextures"> {{ texture.label }} </option>
           </select>
           <select v-model="selectedRoughness">
             <option value="" disabled selected>roughness</option>
-            <option v-for="texture in roughnessTextures"> {{ texture.value }} </option>
+            <option v-for="texture in roughnessTextures"> {{ texture.label }} </option>
           </select>
           <select v-model="selectedMetalness">
             <option value="" disabled selected>metalness</option>
-            <option v-for="texture in metalnessTextures"> {{ texture.value }} </option>
+            <option v-for="texture in metalnessTextures"> {{ texture.label }} </option>
           </select>
           <select v-model="selectedNormal">
             <option value="" disabled selected>normal</option>
-            <option v-for="texture in normalTextures"> {{ texture.value }} </option>
+            <option v-for="texture in normalTextures"> {{ texture.label }} </option>
           </select>
           <select v-model="selectedSheen">
             <option value="" disabled selected>sheen</option>
-            <option v-for="texture in sheenTextures"> {{ texture.value }} </option>
+            <option v-for="texture in sheenTextures"> {{ texture.label }} </option>
           </select>
           <button type="button"> Apply materials </button>
         </div>
