@@ -7,31 +7,31 @@ export const models = [
 ]
 
 export const albedoTextures = [
-  { value: 'albedo-leather.ktx2', label: 'albedo-leather' },
+  // { value: 'albedo-leather.ktx2', label: 'albedo-leather' },
   { value: 'albedo-metal.png', label: 'albedo-metal' },
   { value: 'albedo-velours.png', label: 'albedo-velours' },
   { value: 'albedo-wood.png', label: 'albedo-wood' },
 ]
 
 export const metalnessTextures = [
-  { value: 'metalness-leather.ktx2', label: 'metalness-leather' },
+  // { value: 'metalness-leather.ktx2', label: 'metalness-leather' },
   { value: 'metalness-metal.png', label: 'metalness-metal' },
   { value: 'metalness-velours.png', label: 'metalness-velours' },
   { value: 'metalness-wood.png', label: 'metalness-wood' },
 ]
 
 export const normalTextures = [
-  { value: 'normal-leather.ktx2', label: 'normal-leather' },
+  // { value: 'normal-leather.ktx2', label: 'normal-leather' },
   { value: 'normal-metal.png', label: 'normal-metal' },
   { value: 'normal-velours.png', label: 'normal-velours' },
-  { value: 'normal-wood.png', label: 'normal-wood.png' },
+  { value: 'normal-wood.png', label: 'normal-wood' },
 ]
 
 export const roughnessTextures = [
-  { value: 'roughness-leather.ktx2', label: 'roughness-leather' },
+  // { value: 'roughness-leather.ktx2', label: 'roughness-leather' },
   { value: 'roughness-metal.png', label: 'roughness-metal' },
   { value: 'roughness-velours.png', label: 'roughness-velours' },
-  { value: 'roughness-wood.png', label: 'roughness-wood.png' },
+  { value: 'roughness-wood.png', label: 'roughness-wood' },
 ]
 
 export const sheenTextures = [

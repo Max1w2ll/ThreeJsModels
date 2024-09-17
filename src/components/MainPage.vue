@@ -5,6 +5,8 @@ import { onMounted, ref } from "vue";
 import { OrbitControls } from "three/examples/jsm/controls/OrbitControls"
 import { TransformControls } from "three/examples/jsm/controls/TransformControls"
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader'
+import { RGBELoader } from "three/examples/jsm/loaders/RGBELoader";
+import { KTX2Loader } from "three/examples/jsm/loaders/KTX2Loader";
 import Stats from 'stats.js'
 import {
   models,
@@ -48,8 +50,8 @@ onMounted(() => {
   createCamera()
   createGrid()
   createXYZ()
-  createAmbientLight()
-  createSpotLight()
+  // createAmbientLight()
+  // createSpotLight()
   createPivot()
 })
 
@@ -61,11 +63,16 @@ const createFPSCounter = () => {
 
 const createScene = () => {
   renderer.setSize( window.innerWidth, window.innerHeight )
+  document.body.appendChild( renderer.domElement )
+  scene.background = new THREE.Color( 0x3f3f3f )
+  new RGBELoader().load('envMap.hdr', (envMap) => {
+    envMap.mapping = THREE.EquirectangularReflectionMapping
+    scene.environment = envMap
+  })
+  renderer.setClearColor(0x505050)
   renderer.shadowMap.enabled = true
   renderer.shadowMap.type = THREE.PCFSoftShadowMap
   renderer.setAnimationLoop( animate )
-  document.body.appendChild( renderer.domElement )
-  scene.background = new THREE.Color( 0x3f3f3f )
 }
 
 const createCamera = () => {
@@ -188,8 +195,98 @@ const removeMesh = () => {
   selectedObject.value = {}
 }
 
+// Textures functions //
 const applyTextures = () => {
-  const texture = THREE.TextureLoader().load(`/textures/${selectedMesh.value}.glb`)
+  if (!selectedObject.value) return
+  const textureLoader = new THREE.TextureLoader()
+
+  const albedo = textureLoader.load(`/textures/albedo/${selectedAlbedo.value}`)
+  const roughness = textureLoader.load(`/textures/roughness/${selectedRoughness.value}.png`)
+  const metalness = textureLoader.load(`/textures/metalness/${selectedMetalness.value}.png`)
+  const normal = textureLoader.load(`/textures/normal/${selectedNormal.value}.png`)
+
+  albedo.wrapS = THREE.RepeatWrapping;
+  normal.wrapS = THREE.RepeatWrapping;
+  albedo.wrapT = THREE.RepeatWrapping;
+  normal.wrapT = THREE.RepeatWrapping;
+  albedo.flipY = false;
+  normal.flipY = false;
+  albedo.anisotropy = 16;
+  normal.anisotropy = 16;
+
+  const newMaterial = new THREE.MeshPhysicalMaterial({
+    map: albedo || '',
+    roughnessMap: roughness || '',
+    metalnessMap: metalness || '',
+    normalMap: normal || '',
+  })
+
+  selectedObject.value.traverse((mesh) => {
+    mesh.material = newMaterial
+  })
+}
+
+const loadKTX2 = () => {
+  if (!selectedObject.value) return
+
+  const ktx2Loader = new KTX2Loader()
+    .setTranscoderPath('textures/')
+    .detectSupport(renderer);
+  ktx2Loader.load('textures/albedo/albedo-leather.ktx2', (texture) => {
+    texture.wrapS = THREE.RepeatWrapping;
+    texture.wrapT = THREE.RepeatWrapping;
+    texture.flipY = false;
+    texture.anisotropy = 16;
+    const newMaterial = new THREE.MeshPhysicalMaterial({ map: texture });
+
+    selectedObject.value.traverse((mesh) => {
+      mesh.material = newMaterial
+    })
+  })
+}
+
+// Save and load //
+const saveScene = () => {
+  const sceneJson = scene.toJSON();
+  const jsonString = JSON.stringify(sceneJson);
+
+  const blob = new Blob([jsonString], { type: 'application/json' });
+  const link = document.createElement('a');
+  link.href = URL.createObjectURL(blob);
+  link.download = 'scene.json';
+  link.click();
+}
+
+const loadScene = (file: File) => {
+  const reader = new FileReader()
+
+  reader.onload = (event) => {
+    const json = event.target?.result;
+    if (typeof json === 'string') {
+      const loader = new THREE.ObjectLoader();
+      const loadedScene = loader.parse(JSON.parse(json));
+
+      scene.clear()
+      createGrid()
+      createXYZ()
+
+      scene.add(loadedScene);
+    }
+  }
+
+  reader.onerror = (error) => {
+    console.error('error', error);
+  }
+
+  reader.readAsText(file);
+}
+
+const handleFileChange = (event: Event) => {
+  const files = (event.target as HTMLInputElement).files;
+  if (files && files.length > 0) {
+    const file = files[0];
+    loadScene(file);
+  }
 }
 
 </script>
@@ -218,7 +315,7 @@ const applyTextures = () => {
           <p class="title"> Materials </p>
           <select v-model="selectedAlbedo">
             <option value="" disabled selected>albedo</option>
-            <option v-for="texture in albedoTextures"> {{ texture.label }} </option>
+            <option v-for="texture in albedoTextures" :value="texture.value"> {{ texture.label }} </option>
           </select>
           <select v-model="selectedRoughness">
             <option value="" disabled selected>roughness</option>
@@ -236,7 +333,7 @@ const applyTextures = () => {
             <option value="" disabled selected>sheen</option>
             <option v-for="texture in sheenTextures"> {{ texture.label }} </option>
           </select>
-          <button type="button"> Apply materials </button>
+          <button type="button" @click="applyTextures()"> Apply materials </button>
         </div>
         <div class="setting">
           <p class="title"> Create mesh </p>
@@ -245,6 +342,12 @@ const applyTextures = () => {
             <option v-for="model in models"> {{ model.value }} </option>
           </select>
           <button @click="createMesh()" type="button">Create</button>
+        </div>
+        <div class="setting">
+          <p class="title"> Experimental </p>
+          <button type="button" @click="saveScene()"> Save scene </button>
+          <input class="select-file" type="file" accept="application/json" @change="handleFileChange"/>
+          <button type="button" @click="loadKTX2()"> Load ktx2 </button>
         </div>
       </div>
   </div>
@@ -255,7 +358,7 @@ const applyTextures = () => {
   position: absolute;
   top: 64px;
   right: 5px;
-  height: 600px;
+  height: 650px;
   width: 200px;
   z-index: 9999;
   background: #393939;
@@ -313,6 +416,10 @@ const applyTextures = () => {
         border: none;
         border-radius: 4px;
         color: #fefefe;
+      }
+
+      .select-file {
+        width: 200px;
       }
 
       button {
